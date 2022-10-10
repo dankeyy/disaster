@@ -235,7 +235,7 @@ PROJ-ROOT: path to project root, REL-FILE FILE."
           ((string-match-p disaster-zig-regexp file)
            (format "%s %s %s"
                    disaster-zig disaster-zigflags (shell-quote-argument file)))
-          (t (warn "File %s do not seems to be a C, C++, Fortran or Zig file." file)))))
+          (t (warn "Unsupported file format" file)))))
 
 (defun disaster-create-compile-command-cmake (make-root cwd rel-obj obj-file proj-root rel-file)
   "Create compile command for a CMake-based project.
@@ -372,7 +372,7 @@ is used."
                 (insert (concat cc "\n")))
               (compilation-mode)
               (display-buffer makebuf))))
-      (message "Not a C, C++, Fortran or Zig source file"))))
+      (message "Unsupported file format"))))
 
 (defun disaster--shadow-non-assembly-code ()
   "Scans current buffer, which should be in `asm-mode'.
