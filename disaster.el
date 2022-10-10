@@ -115,6 +115,11 @@
   :group 'disaster
   :type 'string)
 
+(defcustom disaster-zig (or (getenv "ZIG") "zig")
+  "The command for your zig compiler."
+  :group 'disaster
+  :type 'string)
+
 (defcustom disaster-cflags (or (getenv "CFLAGS")
                                "-march=native")
   "Command line options to use when compiling C."
@@ -134,9 +139,15 @@
   :group 'disaster
   :type 'string)
 
+(defcustom disaster-zigflags (or (getenv "ZIGFLAGS")
+                                     "build-obj")
+  "Command line options to use when compiling Fortran."
+  :group 'disaster
+  :type 'string)
+
 (defcustom disaster-objdump
   (concat (if (eq system-type 'darwin) "gobjdump" "objdump")
-          " -d -M att -Sl --no-show-raw-insn")
+          " -d -M intel -Sl --no-show-raw-insn")
   "The command name and flags for running objdump."
   :group 'disaster
   :type 'string)
@@ -177,6 +188,17 @@ Sublist are ordered from highest to lowest precedence."
   :group 'disaster
   :type 'regexp)
 
+
+(defcustom disaster-zig-regexp "\\.zig$"
+  "Regexp for Zig source files."
+  :group 'disaster
+  :type 'regexp)
+
+(defcustom disaster-python-regexp "\\.py$"
+  "Regexp for Python source files."
+  :group 'disaster
+  :type 'regexp)
+
 ;;;###autoload
 (defvar disaster-find-build-root-functions nil
   "Functions to call to get the build root directory from the project directory.
@@ -185,7 +207,7 @@ functions return nil, the project root directory will be used as
 the build directory.")
 
 (defun disaster-create-compile-command-make (make-root cwd rel-obj obj-file proj-root rel-file file)
-  "Create compile command for a Make-based project.
+  "Create compile command.
 MAKE-ROOT: path to build root,
 CWD: path to current source file,
 REL-OBJ: path to object file (relative to project root),
@@ -193,10 +215,10 @@ OBJ-FILE: full path to object file (build root!)
 PROJ-ROOT: path to project root, REL-FILE FILE."
   (if make-root
       ;; if-then
-      (cond ((equal cwd make-root)
-             (format "make %s %s" disaster-make-flags (shell-quote-argument rel-obj)))
-            (t (format "make %s -C %s %s"
-                       disaster-make-flags make-root rel-obj)))
+      ;; (cond ((equal cwd make-root)
+      ;;        (format "make %s %s" disaster-make-flags (shell-quote-argument rel-obj)))
+      ;;       (t (format "make %s -C %s %s"
+      ;;                  disaster-make-flags make-root rel-obj)))
     ;; if-else
     (cond ((string-match-p disaster-cpp-regexp file)
            (format "%s %s -g -c -o %s %s"
@@ -210,7 +232,10 @@ PROJ-ROOT: path to project root, REL-FILE FILE."
            (format "%s %s -g -c -o %s %s"
                    disaster-fortran disaster-fortranflags
                    (shell-quote-argument obj-file) (shell-quote-argument file)))
-          (t (warn "File %s do not seems to be a C, C++ or Fortran file." file)))))
+          ((string-match-p disaster-zig-regexp file)
+           (format "%s %s %s"
+                   disaster-zig disaster-zigflags (shell-quote-argument file)))
+          (t (warn "File %s do not seems to be a C, C++, Fortran or Zig file." file)))))
 
 (defun disaster-create-compile-command-cmake (make-root cwd rel-obj obj-file proj-root rel-file)
   "Create compile command for a CMake-based project.
@@ -239,7 +264,7 @@ PROJ-ROOT: path to project root, REL-FILE FILE."
           (when break-on-next
             (throw 'object-file part)))))))
 
-(defun disaster-create-compile-command (use-cmake make-root cwd rel-obj obj-file proj-root rel-file file)
+(defun disaster-create-compile-command (use-cmake make-root cwd rel-obj obj-file proj-root rel-file file &optional bytecode)
   "Create the actual compile command.
 USE-CMAKE: non NIL to use CMake, NIL to use Make or default compiler options,
 MAKE-ROOT: path to build root,
@@ -247,9 +272,10 @@ CWD: path to current source file,
 REL-OBJ: path to object file (relative to project root),
 OBJ-FILE: full path to object file (build root!)
 PROJ-ROOT: path to project root, REL-FILE FILE."
-  (if use-cmake
-      (disaster-create-compile-command-cmake make-root cwd rel-obj obj-file proj-root rel-file)
-    (disaster-create-compile-command-make make-root cwd rel-obj obj-file proj-root rel-file file)))
+  (when (eq bytecode nil)
+    (if use-cmake
+        (disaster-create-compile-command-cmake make-root cwd rel-obj obj-file proj-root rel-file)
+    (disaster-create-compile-command-make make-root cwd rel-obj obj-file proj-root rel-file file))))
 
 ;;;###autoload
 (defun disaster (&optional file line)
@@ -278,17 +304,20 @@ is used."
          (asmbuf    (get-buffer-create disaster-buffer-assembly)))
     (if (or (string-match-p disaster-c-regexp file)
             (string-match-p disaster-cpp-regexp file)
-            (string-match-p disaster-fortran-regexp file))
+            (string-match-p disaster-fortran-regexp file)
+            (string-match-p disaster-zig-regexp file)
+            (string-match-p disaster-python-regexp file))
         (let* ((cwd       (file-name-directory (expand-file-name (buffer-file-name)))) ;; path to current source file
                (proj-root (disaster-find-project-root nil file)) ;; path to project root
                (use-cmake (file-exists-p (concat proj-root "/compile_commands.json")))
+               (bytecode  (string-match-p disaster-python-regexp file))
                (make-root (disaster-find-build-root use-cmake proj-root)) ;; path to build root
                (rel-file  (if proj-root ;; path to source file (relative to project root)
                               (file-relative-name file proj-root)
                             file))
                (rel-obj   (concat (file-name-sans-extension rel-file) ".o")) ;; path to object file (relative to project root)
                (obj-file  (concat make-root rel-obj)) ;; full path to object file (build root!)
-               (cc        (disaster-create-compile-command use-cmake make-root cwd rel-obj obj-file proj-root rel-file file))
+               (cc        (disaster-create-compile-command use-cmake make-root cwd rel-obj obj-file proj-root rel-file file bytecode))
                (dump      (format "%s %s" disaster-objdump
                                   (shell-quote-argument (concat make-root rel-obj))))
                (line-text (buffer-substring-no-properties
@@ -303,10 +332,15 @@ is used."
                     dump     (format "%s %s" disaster-objdump
                                      (shell-quote-argument obj-file)))))
 
-          (if (and (eq 0 (progn
-                           (message (format "Running: %s" cc))
-                           (shell-command cc makebuf)))
-                   (file-exists-p obj-file))
+          (when bytecode
+            (setq dump (format "pydump %s" buffer-file-name)))
+
+          (if (or
+                bytecode
+                (and (eq 0 (progn
+                        (message (format "Running: %s" cc))
+                        (shell-command cc makebuf)))
+                     (file-exists-p obj-file)))
               (when (eq 0 (progn
                             (message (format "Running: %s" dump))
                             (shell-command dump asmbuf)))
@@ -321,13 +355,15 @@ is used."
                 (let ((oldbuf (current-buffer)))
                   (switch-to-buffer-other-window asmbuf)
                   (goto-char 0)
-                  (if (or (search-forward line-text nil t)
-                          (search-forward file-line nil t))
+                  (if
+                      (search-forward file-line nil t)
                       (progn
+                        (search-forward line-text nil t)
                         (recenter)
                         (overlay-put (make-overlay (point-at-bol)
                                                    (1+ (point-at-eol)))
                                      'face 'region))
+                    ;; (message (format "%s\n%s" line-text file-line))
                     (message "Couldn't find corresponding assembly line."))
                   (switch-to-buffer-other-window oldbuf)))
             (with-current-buffer makebuf
@@ -336,7 +372,7 @@ is used."
                 (insert (concat cc "\n")))
               (compilation-mode)
               (display-buffer makebuf))))
-      (message "Not a C, C++ or Fortran source file"))))
+      (message "Not a C, C++, Fortran or Zig source file"))))
 
 (defun disaster--shadow-non-assembly-code ()
   "Scans current buffer, which should be in `asm-mode'.
@@ -347,7 +383,15 @@ assembly code."
     (goto-char 0)
     (while (not (eobp))
       (beginning-of-line)
-      (if (not (looking-at "[ \t]+[a-f0-9]+:[ \t]+"))
+      (when (and
+              ;; note adding the following two regexes changes the highlighting of
+              ;; not only pydump but also objdump which has similar patterns
+              ;; (which for me are ok to highlight)
+              ;; pay attention when adding more modes in the future
+              (not (looking-at "[\s]+[0-9]+"))
+              (not (looking-at "Disassembly of"))
+              (not (looking-at "[ \t]+[a-fA-Z0-9]+:[ \t]")))
+
           (let ((eol (save-excursion (end-of-line) (point))))
             (overlay-put (make-overlay (point) eol)
                          'face 'shadow)))
