@@ -1,18 +1,28 @@
 <a href="https://github.com/jart/disaster"><img src="https://www.gnu.org/software/emacs/images/emacs.png" alt="Emacs Logo" width="80" height="80" align="right"></a>
 ## disaster.el
-Jump straight from source code to corresponding disassembly block in emacs.
+Jump straight from source code to corresponding disassembly block (**and back!**) in emacs.
 
-Note: this fork introduces support for a couple more languages, for now Zig and Python, see:
+This fork introduces support for a couple more languages, for now Zig and Python-
 ![image](https://user-images.githubusercontent.com/74069206/194956770-32a34dcc-3f26-41bf-875b-667011219acc.png)
 
-Pretty experimental and changes some of the original repo's approaches, so for now it will remain a fork.
+**Pretty experimental** and changes some of the original repo's approaches, so for now it will remain a fork.
 
-Note about python support- AFAIK Python doesn't offer an `objdump -Sl`-like disassembly.\
+---
+
+**Note about python support**- AFAIK Python doesn't offer an `objdump -Sl`-like disassembly.\
 That is why I've made [pydump](https://github.com/dankeyy/pydump).\
 pydump's output format makes it both easy for disaster to parse and is more human readable, because as in `objdump -Sl`, the source code is inlined into the dump.\
 So if you wish for python support, put the pydump script in your path as described in pydump's repo for disaster's use.
 
-# Original Readme--
+---
+
+**Note about additional functionality**- this fork introduces a new `disaster-jump-back` interactive function, which allows you, from anywhere in the assembly/ bytecode, to jump back to the matching source code line.\
+You may wish to bind it to a similar key as you did for `disaster`.
+
+---
+&nbsp;
+
+# Original Readme:
 
 *Disassemble C, C++ or Fortran code under cursor*
 
