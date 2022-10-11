@@ -188,7 +188,6 @@ Sublist are ordered from highest to lowest precedence."
   :group 'disaster
   :type 'regexp)
 
-
 (defcustom disaster-zig-regexp "\\.zig$"
   "Regexp for Zig source files."
   :group 'disaster
@@ -199,12 +198,14 @@ Sublist are ordered from highest to lowest precedence."
   :group 'disaster
   :type 'regexp)
 
-;;;###autoload
+
+;;;autoload
 (defvar disaster-find-build-root-functions nil
   "Functions to call to get the build root directory from the project directory.
 If nil is returned, the next function will be tried.  If all
 functions return nil, the project root directory will be used as
 the build directory.")
+
 
 (defun disaster-create-compile-command-make (make-root cwd rel-obj obj-file proj-root rel-file file)
   "Create compile command.
@@ -237,6 +238,7 @@ PROJ-ROOT: path to project root, REL-FILE FILE."
                    disaster-zig disaster-zigflags (shell-quote-argument file)))
           (t (warn "Unsupported file format" file)))))
 
+
 (defun disaster-create-compile-command-cmake (make-root cwd rel-obj obj-file proj-root rel-file)
   "Create compile command for a CMake-based project.
 MAKE-ROOT: path to build root,
@@ -264,6 +266,7 @@ PROJ-ROOT: path to project root, REL-FILE FILE."
           (when break-on-next
             (throw 'object-file part)))))))
 
+
 (defun disaster-create-compile-command (use-cmake make-root cwd rel-obj obj-file proj-root rel-file file &optional bytecode)
   "Create the actual compile command.
 USE-CMAKE: non NIL to use CMake, NIL to use Make or default compiler options,
@@ -276,6 +279,7 @@ PROJ-ROOT: path to project root, REL-FILE FILE."
     (if use-cmake
         (disaster-create-compile-command-cmake make-root cwd rel-obj obj-file proj-root rel-file)
     (disaster-create-compile-command-make make-root cwd rel-obj obj-file proj-root rel-file file))))
+
 
 ;;;###autoload
 (defun disaster (&optional file line)
@@ -302,11 +306,13 @@ is used."
          (file-line (format "%s:%d" file line))
          (makebuf   (get-buffer-create disaster-buffer-compiler))
          (asmbuf    (get-buffer-create disaster-buffer-assembly)))
+
     (if (or (string-match-p disaster-c-regexp file)
             (string-match-p disaster-cpp-regexp file)
             (string-match-p disaster-fortran-regexp file)
             (string-match-p disaster-zig-regexp file)
             (string-match-p disaster-python-regexp file))
+
         (let* ((cwd       (file-name-directory (expand-file-name (buffer-file-name)))) ;; path to current source file
                (proj-root (disaster-find-project-root nil file)) ;; path to project root
                (use-cmake (file-exists-p (concat proj-root "/compile_commands.json")))
@@ -341,6 +347,7 @@ is used."
                         (message (format "Running: %s" cc))
                         (shell-command cc makebuf)))
                      (file-exists-p obj-file)))
+
               (when (eq 0 (progn
                             (message (format "Running: %s" dump))
                             (shell-command dump asmbuf)))
@@ -363,9 +370,10 @@ is used."
                         (overlay-put (make-overlay (point-at-bol)
                                                    (1+ (point-at-eol)))
                                      'face 'region))
-                    ;; (message (format "%s\n%s" line-text file-line))
+
                     (message "Couldn't find corresponding assembly line."))
                   (switch-to-buffer-other-window oldbuf)))
+
             (with-current-buffer makebuf
               (save-excursion
                 (goto-char 0)
@@ -412,6 +420,7 @@ assembly code."
                          'face 'shadow)))
       (forward-line))))
 
+
 (defun disaster--find-parent-dirs (&optional file)
   "Return a list of parent directories with trailing slashes.
 
@@ -430,11 +439,10 @@ FILE default to `w/function buffer-file-name'."
                     (substring dir 0 (+ 1 (match-beginning 0))))))
     (reverse res)))
 
+
 (defun disaster--dir-has-file (dir file)
   "Return t if DIR contain FILE (or any file if FILE is a list).
-
 For example:
-
     (disaster--dir-has-file \"/home/jart/\" \".bashrc\")
     (disaster--dir-has-file \"/home/jart/\" (list \".bashrc\" \".screenrc\"))"
   (let ((res nil)
@@ -446,6 +454,7 @@ For example:
       (setq res (file-exists-p (concat dir (car files)))
             files (cdr files)))
     res))
+
 
 (defun disaster-find-project-root (&optional looks file)
   "General-purpose Heuristic to detect bottom directory of project.
@@ -484,6 +493,7 @@ convenience. If LOOKS is not specified, it'll default to
       (setq looks (cdr looks)))
     res))
 
+
 (defun disaster-find-build-root (use-cmake project-root)
   "Find the root of build directory.
 USE-CMAKE: non nil to use CMake's compile_commands.json,
@@ -504,6 +514,7 @@ PROJECT-ROOT: root directory of the project."
                (and build-root
                     (file-name-as-directory build-root)))
              project-root))))
+
 
 (provide 'disaster)
 
