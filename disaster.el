@@ -386,15 +386,22 @@ is used."
 (defun disaster-jump-back ()
   (interactive)
 
-  (when (search-backward-regexp "^/[/a-zA-Z_\ \-]+.[a-zA-Z]+:[0-9]+$" nil t)
-    (let*
-      ((disline (buffer-substring-no-properties (point-at-bol) (1+ (point-at-eol))))
-      (res (split-string disline ":"))
-      (lineno (nth 1 res)))
+  (let*
+     ((pathline-regexp "^/[/a-zA-Z_\ \-]+.[a-zA-Z]+:[0-9]+$")
+      (eval-disline (lambda () (buffer-substring-no-properties (point-at-bol) (1+ (point-at-eol))))))
 
-      (progn
-        (other-window -1)
-        (goto-line (string-to-number lineno))))))
+    (when (or
+             (string-match pathline-regexp (funcall eval-disline))
+             (search-backward-regexp pathline-regexp nil t))
+
+      (let*
+          ((res (split-string (funcall eval-disline) ":"))
+           (lineno (nth 1 res)))
+
+          (progn
+            (message lineno)
+            (other-window -1)
+            (goto-line (string-to-number lineno)))))))
 
 
 (defun disaster--shadow-non-assembly-code ()
