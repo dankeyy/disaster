@@ -374,6 +374,21 @@ is used."
               (display-buffer makebuf))))
       (message "Unsupported file format"))))
 
+
+(defun disaster-jump-back ()
+  (interactive)
+
+  (when (search-backward-regexp "^/[/a-zA-Z_\ \-]+.[a-zA-Z]+:[0-9]+$" nil t)
+    (let*
+      ((disline (buffer-substring-no-properties (point-at-bol) (1+ (point-at-eol))))
+      (res (split-string disline ":"))
+      (lineno (nth 1 res)))
+
+      (progn
+        (other-window -1)
+        (goto-line (string-to-number lineno))))))
+
+
 (defun disaster--shadow-non-assembly-code ()
   "Scans current buffer, which should be in `asm-mode'.
 Uses the standard `shadow' face for lines that don't appear to contain
