@@ -7,7 +7,7 @@
 ;; Maintainer: Abdelhak Bougouffa <abougouffa@fedoraproject.org>
 ;; Created: 2013-03-02
 ;; Version: 1.0
-;; Package-Requires: ((emacs "27"))
+;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: tools c
 ;; URL: https://github.com/jart/disaster
 
@@ -383,25 +383,42 @@ is used."
       (message "Unsupported file format"))))
 
 
-(defun disaster-jump-back ()
+(defun disaster-jump()
+  "After disaster was ran at least once and an instance buffer is up,
+jump back from assembly block to corresponding source line code.
+Note this also works in the regular sense.
+If disaster instance is up, you may use this function
+to jump to the assembly without re-compiling and initializing disaster."
   (interactive)
 
   (let*
      ((pathline-regexp "^/[/a-zA-Z_\ \-]+.[a-zA-Z]+:[0-9]+$")
       (eval-disline (lambda () (buffer-substring-no-properties (point-at-bol) (1+ (point-at-eol))))))
 
-    (when (or
-             (string-match pathline-regexp (funcall eval-disline))
-             (search-backward-regexp pathline-regexp nil t))
+    (if buffer-file-name
+        ;; when in source code buffer
+        (let*
+            ((source-buffer-name (buffer-file-name))
+             (source-line-number (line-number-at-pos)))
+            (progn
+              (switch-to-buffer-other-window disaster-buffer-assembly)
+              (goto-char (point-min))
+              (search-forward (format "%s:%d" source-buffer-name source-line-number))))
 
-      (let*
-          ((res (split-string (funcall eval-disline) ":"))
-           (lineno (nth 1 res)))
+        ;; else, when in *disaster-assembly* buffer
+        (when (or
+               (string-match pathline-regexp (funcall eval-disline))
+               (search-backward-regexp pathline-regexp nil t))
 
-          (progn
-            (message lineno)
-            (other-window -1)
-            (goto-line (string-to-number lineno)))))))
+          (let*
+              ((res (split-string (funcall eval-disline) ":"))
+               (path (car res))
+               (lineno (nth 1 res)))
+
+              (progn
+                (message lineno)
+                (switch-to-buffer-other-window (get-file-buffer path))
+                (goto-line (string-to-number lineno))))))))
 
 
 (defun disaster--shadow-non-assembly-code ()
