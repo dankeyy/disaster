@@ -16,10 +16,12 @@ So if you wish for python support, put the pydump script in your path as describ
 
 ---
 
-**Note about additional functionality**- this fork introduces a new `disaster-jump` interactive function, which allows you, from anywhere in the assembly/ bytecode, to jump back to the matching source code line.\
-This also works in the regular disaster-way. With this function, given a disaster instance buffer is up (`disaster` was ran at least once) you can jump to asm without re-running `disaster` (and recompiling).\
+**Note on additional functionality**- 
+- `disaster-jump` - interactive function. Allows you, from anywhere in the assembly/ bytecode, to jump back to the matching source code line.\
+Notice this function also works in the regular disaster-way. With this function, given a disaster instance buffer is up (`disaster` was ran at least once) you can jump to asm without re-running `disaster` (and recompiling).\
 You may wish to bind it to a similar key as you did for `disaster`.
 
+- `disaster-custom-command` allows you to invoke disaster with a custom build object command (e.g clang instead of gcc, different optimization level, etc.).
 ---
 &nbsp;
 

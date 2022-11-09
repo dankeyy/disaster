@@ -282,7 +282,7 @@ PROJ-ROOT: path to project root, REL-FILE FILE."
 
 
 ;;;###autoload
-(defun disaster (&optional file line)
+(defun disaster (&optional file line custom-command)
   "Show assembly code for current line of C/C++ file.
 
 Here's the logic path it follows:
@@ -323,7 +323,9 @@ is used."
                             file))
                (rel-obj   (concat (file-name-sans-extension rel-file) ".o")) ;; path to object file (relative to project root)
                (obj-file  (concat make-root rel-obj)) ;; full path to object file (build root!)
-               (cc        (disaster-create-compile-command use-cmake make-root cwd rel-obj obj-file proj-root rel-file file bytecode))
+               (cc        (or
+                            custom-command
+                            (disaster-create-compile-command use-cmake make-root cwd rel-obj obj-file proj-root rel-file file bytecode)))
                (dump      (format "%s %s" disaster-objdump
                                   (shell-quote-argument (concat make-root rel-obj))))
                (line-text (buffer-substring-no-properties
@@ -382,6 +384,10 @@ is used."
               (display-buffer makebuf))))
       (message "Unsupported file format"))))
 
+(defun disaster-custom ()
+  (interactive)
+  (setq-local disaster-custom-command (read-from-minibuffer "Enter Custom Build Command: "))
+  (disaster nil nil disaster-custom-command))
 
 (defun disaster-jump()
   "After disaster was ran at least once and an instance buffer is up,
